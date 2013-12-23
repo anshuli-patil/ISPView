@@ -266,19 +266,19 @@ public class GraphClass
 
 					@Override
 					public void componentHidden(ComponentEvent arg0) {
-						// TODO Auto-generated method stub
+						System.out.println(arg0.toString());
 						
 					}
 
 					@Override
 					public void componentMoved(ComponentEvent arg0) {
-						// TODO Auto-generated method stub
+						System.out.println(arg0.toString());
 						
 					}
 
 					@Override
 					public void componentShown(ComponentEvent arg0) {
-						// TODO Auto-generated method stub
+						System.out.println(arg0.toString());
 						
 					}
 
