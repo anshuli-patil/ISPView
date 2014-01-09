@@ -1,0 +1,121 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.SortedMap;
+
+import org.ardverk.collection.PatriciaTrie;
+import org.ardverk.collection.StringKeyAnalyzer;
+
+/**
+ * 
+ * @author Anshuli
+ * This class provides a method to build a PATRICIA trie to retrieve location of IP address and point to AS that 
+ * it originated from.
+ */
+public class PatriciaTest 
+{
+	/**
+	 * this method uses a PATRICIA trie of IP addresses of known Autonomous Systems to retrieve the 
+	 * location of an IP address
+	 * @param ipAddr an IP address that we shall pinpoint to an Autonomous System where it originated from.
+	 * @return the autonomous system that the IP address belongs to 
+	 */
+	public static String getASFromIP(String ipAddr)
+	{
+		//String ipAddr = "1.22";
+		//for testing... this is a parameter retrieved from a combo-box.
+		
+		PatriciaTrie<String,String> pt = new  PatriciaTrie<String,String>(StringKeyAnalyzer.CHAR);
+		
+		try{
+		Class.forName("org.h2.Driver");
+        Connection conn = DriverManager.getConnection("jdbc:h2:~/COP", "sa", "");
+        Statement stat = conn.createStatement();
+        
+        ResultSet rs;
+        rs = stat.executeQuery("SELECT * FROM PATHDB");
+        
+        while (rs.next()) 
+        {
+        	String network = rs.getString("network");
+        	String asName = rs.getString("asname");
+        	pt.put(network,asName);
+        	
+        }
+        stat.close();
+        conn.close();
+        
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		catch(ClassNotFoundException e)
+		{
+			e.printStackTrace();
+		}
+		
+		SortedMap<String, String> map = pt.prefixMap(ipAddr);
+		//System.out.println(map);
+		
+		class IP
+		{
+			String addr;
+			int mask;
+			IP(String addr,int mask)
+			{
+				this.addr=addr;
+				this.mask = mask;
+			}
+		}
+
+		Set<String> keys = map.keySet();
+		Iterator<String> iter = keys.iterator();
+		ArrayList<IP> masks = new ArrayList<IP>();
+		while(iter.hasNext())
+		{
+			String ip = iter.next();
+			int i=0;
+			int mask =0;
+			boolean foundMask = false;
+			for(i =0;i<ip.length();i++)
+			{
+				if(ip.charAt(i)=='/')
+				{
+					foundMask = true;
+					break;
+				}
+			}
+			
+			if(foundMask)
+				mask = Integer.parseInt(ip.substring(i+1,ip.length()));
+			else 
+				mask = 32;//when no mask is specified, the entire network is exactly one IP address.
+					
+						
+			masks.add(new IP(ip,mask));
+			
+		}
+		Iterator<IP> max = masks.iterator();
+		int maxVal =0;
+		String ipMatched = "";
+		while(max.hasNext())
+		{
+			IP val = max.next();
+			if(val.mask>maxVal)
+			{
+				maxVal = val.mask;ipMatched = val.addr;
+			}
+		}
+		//System.out.println("max mask "+maxVal);
+		//System.out.print("best-fit IP "+ipMatched+" from AS -");
+		//System.out.println(map.get(ipMatched));
+		return map.get(ipMatched);
+	}
+}
+
